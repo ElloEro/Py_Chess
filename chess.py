@@ -50,8 +50,10 @@ class Piece():
         self.position = position
         self.image = "NULL"
 
-    def move(self, new_position: tuple):
-        self.position = new_position
+    def move(self, new_position: tuple[int, int]):
+        # Out of bounds check
+        new_x, new_y = max(0, min(7, new_position[0] // SQUARE_SIZE)), max(0, min(7, new_position[1] // SQUARE_SIZE))
+        self.position = (new_x, new_y)
 
     def is_valid_move(self, board, new_position: tuple) -> tuple:
         pass
@@ -211,7 +213,7 @@ class Game():
             raise
 
     def play(self) -> None:
-
+        dragging_piece = None
         # Draw the Chess Board and load initial piece placement
         while self.run():
             # event handling
@@ -225,7 +227,26 @@ class Game():
             for event in pygame.event.get():
                 # Check if the user is attempting to drag and drop a piece
                 if (event.type == pygame.MOUSEBUTTONDOWN) and (event.button == 1):
-                        print("HELLO WORLD!\n")
+                    x, y = event.pos
+                    print("CURSOR: ", x,y)
+                    # CHECK BLACK PIECES
+                    for piece in self.black.get_pieces():
+                        piece_position = piece.get_position()
+                        if (piece_position[0] * 50 + 25 - 20 <= x <= piece_position[0] * 50 + 25 + 20) and (piece_position[1] * 50 + 25 - 20 <= y <= piece_position[1] * 50 + 25 + 20):
+                            dragging_piece = piece
+
+                    # CHECK WHITE PIECES
+                    for piece in self.white.get_pieces():
+                        piece_position = piece.get_position()
+                        if (piece_position[0] * 50 + 25 - 20 <= x <= piece_position[0] * 50 + 25 + 20) and (piece_position[1] * 50 + 25 - 20 <= y <= piece_position[1] * 50 + 25 + 20):
+                            dragging_piece = piece
+                # Check if the user released mouse 1
+                if (event.type == pygame.MOUSEBUTTONUP) and (event.button == 1):
+                    dragging_piece = None
+                # Check if the user is dragging
+                if (event.type == pygame.MOUSEMOTION) and (dragging_piece):
+                    print(event.pos)
+                    dragging_piece.move(event.pos)
                 # Check if the user has quit
                 if event.type == pygame.QUIT:
                     self.set_run(False)
