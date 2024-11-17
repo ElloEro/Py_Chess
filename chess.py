@@ -1,6 +1,18 @@
 import pygame
 from typing import List
 
+"""
+    TODO:
+        > ADD CASTLING
+        > ADD EN PASSENTE
+        > ADD CHECK
+        > ADD CHECKMATE
+        > ADD PROMOTE
+        > PLAYER TURN
+    FUTURE MAYBE:
+        > UNDO BUTTON
+"""
+
 # GLOBAL CONSTANT VARIABLES
 BLACK = "BLACK"
 WHITE = "WHITE"
