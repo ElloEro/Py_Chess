@@ -96,6 +96,7 @@ class Piece():
         self.colour = colour
         self.position = position
         self.image = "NULL"
+        self.rule = None
 
     def move(self, new_position: tuple[int, int]):
         # Out of bounds check
@@ -126,15 +127,15 @@ class Piece():
     
     def get_position(self) -> tuple:
         return self.position
+
+    def get_rule(self) -> List[tuple[int, int]]:
+        return self.rule
     
     def load_colour_image(self, colour: str) -> str:
         pass
     
     def get_image(self) -> pygame:
         return self.image
-
-    def rule(self) -> bool:
-        pass
     
     def __str__(self):
         return "Piece: {piece} | Colour: {colour} | Position: {position}".format(piece = self.get_piece(), colour = self.get_colour(), position = self.get_position())
@@ -146,6 +147,7 @@ class King(Piece):
     def __init__(self, colour: str, position: tuple) -> None:
         super().__init__(KING, colour, position)
         self.image = self.load_colour_image(colour)
+        self.rule = KING_MOVES
     
     def load_colour_image(self, colour: str) -> str:
         if colour == WHITE:
@@ -156,7 +158,7 @@ class King(Piece):
         valid_pos = []
         king_x, king_y = old_position
 
-        for move_x, move_y in KING_MOVES:
+        for move_x, move_y in self.get_rule():
             if (move_x + king_x < 0 or move_x + king_x > 7):
                 continue
             if (move_y + king_y < 0 or move_y + king_y > 7):
@@ -168,6 +170,7 @@ class Queen(Piece):
     def __init__(self, colour: str, position: tuple) -> None:
         super().__init__(QUEEN, colour, position)
         self.image = self.load_colour_image(colour)
+        self.rule = QUEEN_MOVES
 
     def load_colour_image(self, colour: str) -> str:
         if colour == WHITE:
@@ -177,7 +180,7 @@ class Queen(Piece):
     def valid_move(self, old_position: tuple[int, int], enemy: tuple[int, int], ally: tuple[int, int]) -> List[tuple[int, int]]:
         valid_pos = []
 
-        for move_x, move_y in QUEEN_MOVES:
+        for move_x, move_y in self.get_rule():
             queen_x, queen_y = old_position
             while (0 <= move_x + queen_x <= 7 and 0 <= move_y + queen_y <= 7 and (move_x + queen_x, move_y + queen_y) not in ally):
                 # If we encounter an enemy piece on the next square
@@ -194,6 +197,7 @@ class Rook(Piece):
     def __init__(self, colour: str, position: tuple) -> None:
         super().__init__(ROOK, colour, position)
         self.image = self.load_colour_image(colour)
+        self.rule = ROOK_MOVES
 
     def load_colour_image(self, colour: str) -> str:
         if colour == WHITE:
@@ -203,7 +207,7 @@ class Rook(Piece):
     def valid_move(self, old_position: tuple[int, int], enemy: tuple[int, int], ally: tuple[int, int]) -> List[tuple[int, int]]:
         valid_pos = []
 
-        for move_x, move_y in ROOK_MOVES:
+        for move_x, move_y in self.get_rule():
             rook_x, rook_y = old_position
             while (0 <= move_x + rook_x <= 7 and 0 <= move_y + rook_y <= 7 and (move_x + rook_x, move_y + rook_y) not in ally):
                 # If we encounter an enemy piece on the next square
@@ -222,6 +226,7 @@ class Knight(Piece):
     def __init__(self, colour: str, position: tuple) -> None:
         super().__init__(KNIGHT, colour, position)
         self.image = self.load_colour_image(colour)
+        self.rule = KNIGHT_MOVES
     
     def load_colour_image(self, colour: str) -> str:
         if colour == WHITE:
@@ -237,7 +242,7 @@ class Knight(Piece):
         valid_pos = []
         knight_x, knight_y = old_position
 
-        for move_x, move_y in KNIGHT_MOVES:
+        for move_x, move_y in self.get_rule():
             if (move_x + knight_x < 0 or move_x + knight_x > 7):
                 continue
             if (move_y + knight_y < 0 or move_y + knight_y > 7):
@@ -249,6 +254,7 @@ class Bishop(Piece):
     def __init__(self, colour: str, position: tuple) -> None:
         super().__init__(BISHOP, colour, position)
         self.image = self.load_colour_image(colour)
+        self.rule = BISHOP_MOVES
 
     def load_colour_image(self, colour: str) -> str:
         if colour == WHITE:
@@ -258,7 +264,7 @@ class Bishop(Piece):
     def valid_move(self, old_position: tuple[int, int], enemy: tuple[int, int], ally: tuple[int,int]) -> List[tuple[int,int]]:
         valid_pos = []
 
-        for move_x, move_y in BISHOP_MOVES:
+        for move_x, move_y in self.get_rule():
             bishop_x, bishop_y = old_position
             while (0 <= move_x + bishop_x <= 7 and 0 <= move_y + bishop_y <= 7 and (move_x + bishop_x, move_y + bishop_y) not in ally):
                 # If we encounter an enemy piece on the next square
@@ -275,6 +281,10 @@ class Pawn(Piece):
     def __init__(self, colour: str, position: tuple) -> None:
         super().__init__(PAWN, colour, position)
         self.image = self.load_colour_image(colour)
+        if (self.get_colour() == BLACK):
+            self.rule = [BLACK_PAWN_MOVE, BLACK_PAWN_TAKE]
+        else:
+            self.rule = [WHITE_PAWN_MOVE, WHITE_PAWN_TAKE] 
 
     def load_colour_image(self, colour: str) -> str:
         if colour == WHITE:
@@ -284,31 +294,20 @@ class Pawn(Piece):
     def valid_move(self, old_position: tuple[int, int], enemy: tuple[(int, int)], _) -> List[tuple[int, int]]:
         valid_pos = []
         cur_x, cur_y = old_position[0], old_position[1]
-        if self.get_colour() == BLACK:
-            # BLACK PAWN
-            for move_x, move_y in BLACK_PAWN_MOVE:
-                if (move_x + cur_x < 0 or move_x + cur_x > 7):
+        # Check for movement
+        for move_x, move_y in self.get_rule()[0]:
+            if (move_x + cur_x < 0 or move_x + cur_x > 7):
+                continue
+            if (move_y + cur_y < 0 or move_y + cur_y > 7):
+                continue
+            if (move_x + cur_x, move_y + cur_y) in enemy:
+                continue
+            valid_pos.append((move_x + cur_x, move_y + cur_y))
+        # Check for diagonal take
+        for move_x, move_y in self.get_rule()[1]:
+            if (move_x + cur_x, move_y + cur_y) not in enemy:
                     continue
-                if (move_y + cur_y < 0 or move_y + cur_y > 7):
-                    continue
-                valid_pos.append((move_x + cur_x, move_y + cur_y))
-            # Check for any diagonal take
-            for move_x, move_y in BLACK_PAWN_TAKE:
-                if (move_x + cur_x, move_y + cur_y) not in enemy:
-                    continue
-                valid_pos.append((move_x + cur_x, move_y + cur_y))
-        else:
-            # WHITE PAWN
-            for move_x, move_y in WHITE_PAWN_MOVE:
-                if (move_x + cur_x < 0 or move_x + cur_x > 7):
-                    continue
-                if (move_y + cur_y < 0 or move_y + cur_y > 7):
-                    continue
-                valid_pos.append((move_x + cur_x, move_y + cur_y))
-            for move_x, move_y in WHITE_PAWN_TAKE:
-                if (move_x + cur_x, move_y + cur_y) not in enemy:
-                    continue
-                valid_pos.append((move_x + cur_x, move_y + cur_y))
+            valid_pos.append((move_x + cur_x, move_y + cur_y))
         return valid_pos
 
 
