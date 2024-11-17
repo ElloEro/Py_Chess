@@ -233,7 +233,7 @@ class Knight(Piece):
     new_list = [(move_x + knight_x, move_y + knight_y) for move_x, move_y in KNIGHT_MOVES \
             if (0 <= move_x + knight_x <= 7) and (0 <= move_y + knight_y <= 7)]
     """
-    def valid_move(self, old_position: tuple[int, int]) -> List[tuple[int, int]]:
+    def valid_move(self, old_position: tuple[int, int], _, __) -> List[tuple[int, int]]:
         valid_pos = []
         knight_x, knight_y = old_position
 
@@ -449,6 +449,7 @@ class Game():
                         if (dragging_piece.get_position() in self.black.get_position()):
                             captured_piece = self.black.remove_at(dragging_piece.get_position())
                             self.white.add_capture(captured_piece)
+                            print(self.white.get_captured_pieces())
                     else:
                         # BLACK
                         if (not dragging_piece.is_valid_move(cur, self.white.get_position(), (event.pos[0] // SQUARE_SIZE, event.pos[1] // SQUARE_SIZE), prev_place)):
@@ -458,6 +459,7 @@ class Game():
                         if (dragging_piece.get_position() in self.white.get_position()):
                             captured_piece = self.white.remove_at(dragging_piece.get_position())
                             self.black.add_capture(captured_piece)
+                            print(self.black.get_captured_pieces())
                     dragging_piece = None
                     prev_place = None
                     cur = None
