@@ -7,10 +7,9 @@ from typing import List
         > ADD EN PASSENTE
         > ADD CHECK
         > ADD CHECKMATE
-        > ADD PROMOTE
-        > PLAYER TURN
     FUTURE MAYBE:
         > UNDO BUTTON
+        > THIS ENTIRE THING IS UGLY, ADD CONTROLLER PROBABLY
 """
 
 # GLOBAL CONSTANT VARIABLES
@@ -91,7 +90,6 @@ WHITE_PAWN_TAKE = [
             ( 1,  -1)  # Take Top Right
 ]
 
-
 """
     [[(0,0),_,_,_,_,_,_,_]]
     [[_,_,_,_,_,_,_,_]]
@@ -109,6 +107,7 @@ class Piece():
         self.position = position
         self.image = "NULL"
         self.rule = None
+        self.prev_turn = None
 
     def move(self, new_position: tuple[int, int]):
         # Out of bounds check
@@ -142,15 +141,21 @@ class Piece():
 
     def get_rule(self) -> List[tuple[int, int]]:
         return self.rule
+
+    def set_prev_turn(self, prev: tuple[int, int]):
+        self.prev_turn = prev
     
     def load_colour_image(self, colour: str) -> str:
+        pass
+
+    def promote(self) -> bool:
         pass
     
     def get_image(self) -> pygame:
         return self.image
     
     def __str__(self):
-        return "Piece: {piece} | Colour: {colour} | Position: {position}".format(piece = self.get_piece(), colour = self.get_colour(), position = self.get_position())
+        return "Piece: {piece} | Colour: {colour} | Position: {position} | Previous Turn: {previous}".format(piece = self.get_piece(), colour = self.get_colour(), position = self.get_position(), previous = self.prev_turn)
 
     def __repr__(self):
         return "{piece}({colour}, {position})\n".format(piece = self.get_piece(), colour = self.get_colour(), position = self.get_position())
@@ -322,6 +327,14 @@ class Pawn(Piece):
             valid_pos.append((move_x + cur_x, move_y + cur_y))
         return valid_pos
 
+    def promote(self) -> bool:
+        if (self.get_colour() == WHITE and self.get_position()[1] == 0):
+            return True
+        if (self.get_colour() == BLACK and self.get_position()[1] == 7):
+            return True
+        return False
+
+
 
 class Player():
     def __init__(self, pieces: List[Piece]) -> None:
@@ -394,6 +407,31 @@ class GameGrid():
             x, y = pieces.get_position()[0] * 50, pieces.get_position()[1] * 50
             self._screen.blit(pieces.get_image(), (x, y))
 
+    def draw_promotion(self, promote_piece: Pawn) -> None:
+        # Draw a rectangle box
+        position = promote_piece.get_position()
+        colour = promote_piece.get_colour()
+
+        # Determine the promotion index based on the color
+        if colour == WHITE:
+            index = promote_piece.get_position()[1]
+            pygame.draw.rect(self._screen, (200, 200, 200), (position[0] * 50, position[1] * 50, 50, 200))
+        else:
+            index = promote_piece.get_position()[1] - 3
+            pygame.draw.rect(self._screen, (200, 200, 200), (position[0] * 50, (position[1] - 3) * 50, 50, 200))
+        
+        promotion_map = {
+            0: Queen,
+            1: Knight,
+            2: Rook,
+            3: Bishop, 
+        }
+
+        possible = []
+        for key, value in promotion_map.items():
+            possible.append(value(colour, (position[0], index + key)))
+            self._screen.blit(possible[key].get_image(), (possible[key].get_position()[0] * 50, possible[key].get_position()[1] * 50))
+        
 class Game():
     def __init__(self) -> None:
         # Initialise pygames
@@ -407,6 +445,7 @@ class Game():
             self.grid = GameGrid(self.get_screen())
             [self.black, self.white] = self.setup()
             self.turn = True # If True, then it is White Turn, else False if it is Black turn
+            self.promoting = False
 
         except Exception:
             pygame.quit()
@@ -416,6 +455,7 @@ class Game():
         dragging_piece = None
         prev_place = None
         cur = None
+        promote_piece = Pawn(WHITE, (0,0))
         # Draw the Chess Board and load initial piece placement
         while self.run():
             # event handling
@@ -430,7 +470,26 @@ class Game():
                 draw_x, draw_y = event.pos
                 self.screen.blit(dragging_piece.get_image(), (draw_x - 20, draw_y - 20))
 
+            if (self.promoting):
+                self.grid.draw_promotion(promote_piece)
+
             for event in pygame.event.get():
+                if (self.promoting) and (event.type == pygame.MOUSEBUTTONDOWN) and (event.button == 1):
+                    x, y = event.pos[0] // SQUARE_SIZE, event.pos[1] // SQUARE_SIZE
+                    if (self.cancel_promotion((x,y), promote_piece)):
+                        # We did not promote, change our turn back
+                        # Undo the previous move
+                        print("UNDO")
+                    else:
+                        chosen_piece = self.promote_pawn(y, promote_piece)
+                        if (not self.get_turn()):
+                            self.white.remove_piece(promote_piece)
+                            self.white.add_piece(chosen_piece)
+                        else:
+                            self.black.remove_piece(promote_piece)
+                            self.black.add_piece(chosen_piece)
+                    self.promoting = not self.promoting 
+                    print(chosen_piece)
                 # Check if the user is attempting to drag and drop a piece
                 if (event.type == pygame.MOUSEBUTTONDOWN) and (event.button == 1):
                     x, y = event.pos
@@ -460,6 +519,7 @@ class Game():
                             dragging_piece.position = prev_place
                         else:
                             self.change_turn()
+                        dragging_piece.set_prev_turn(prev_place)
                         self.white.add_piece(dragging_piece)
                         # Check if we are taking a piece
                         if (dragging_piece.get_position() in self.black.get_position()):
@@ -471,11 +531,16 @@ class Game():
                             dragging_piece.position = prev_place
                         else:
                             self.change_turn()
+                        dragging_piece.set_prev_turn(prev_place)
                         self.black.add_piece(dragging_piece)
                         # Check if we are taking a piece
                         if (dragging_piece.get_position() in self.white.get_position()):
                             captured_piece = self.white.remove_at(dragging_piece.get_position())
                             self.black.add_capture(captured_piece)
+                    # Check if we are promoting
+                    if dragging_piece.__class__ == Pawn and (dragging_piece.get_position()[1] == 7 or dragging_piece.get_position()[1] == 0):
+                        self.promoting = True
+                        promote_piece = dragging_piece
                     dragging_piece = None
                     prev_place = None
                     cur = None
@@ -485,6 +550,7 @@ class Game():
                 # Check if the user has quit
                 if event.type == pygame.QUIT:
                     self.set_run(False)
+
             pygame.display.update()
 
     def setup(self) -> List[Player]:
@@ -513,6 +579,31 @@ class Game():
             Knight(colour, (6,row)),
             Rook(colour, (7,row))
         ] + [Pawn(colour, (i, pawn_row)) for i in range(8)]
+
+    def promote_pawn(self, y: int, promote_piece: Piece) -> Piece:
+        position = promote_piece.get_position()
+        colour = promote_piece.get_colour()
+
+        # Determine the promotion index based on the color
+        if colour == WHITE:
+            index = y
+        else:
+            index = y - 4
+        
+        promotion_map = {
+            0: Queen,
+            1: Knight,
+            2: Rook,
+            3: Bishop
+        }
+
+        return promotion_map.get(index, Bishop)(colour, position)
+
+    def cancel_promotion(self, click: tuple[int, int], piece: Piece) -> bool:
+        if (piece.get_colour() == WHITE):
+            return (click[1] < 0 or click[1] > 3 or click[0] != piece.get_position()[0])
+        else:
+            return (click[1] < 4 or click[1] > 7 or click[0] != piece.get_position()[0])
 
     def change_turn(self):
         self.turn = not self.turn
