@@ -1,5 +1,11 @@
 WHITE = 1
 BLACK = 0
+KNIGHT = "knight"
+ROOK = "rook"
+QUEEN = "queen"
+KING = "king"
+BISHOP = "bishop"
+PAWN = "pawn"
 
 # Piece class
 class Piece:
