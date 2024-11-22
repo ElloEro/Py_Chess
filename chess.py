@@ -381,6 +381,9 @@ class Player():
     def print_pieces(self):
         for piece in self.get_pieces():
             print(piece)
+
+    def __str__(self):
+        return "Colour: {colour} | Pieces: {pieces} | Captured: {capture}".format(colour = self.get_pieces()[0].get_colour(), pieces = self.get_pieces(), capture = self.get_captured_pieces())
         
 class GameGrid():
     def __init__(self, screen: pygame) -> None:
@@ -446,6 +449,7 @@ class Game():
             [self.black, self.white] = self.setup()
             self.turn = True # If True, then it is White Turn, else False if it is Black turn
             self.promoting = False
+            self.prev = [self.black, self.white]
 
         except Exception:
             pygame.quit()
@@ -457,6 +461,8 @@ class Game():
         cur = None
         promote_piece = Pawn(WHITE, (0,0))
         # Draw the Chess Board and load initial piece placement
+        self.undo()
+        index = 1
         while self.run():
             # event handling
             self.timer.tick(self.fps)
@@ -477,8 +483,8 @@ class Game():
                 if (self.promoting) and (event.type == pygame.MOUSEBUTTONDOWN) and (event.button == 1):
                     x, y = event.pos[0] // SQUARE_SIZE, event.pos[1] // SQUARE_SIZE
                     if (self.cancel_promotion((x,y), promote_piece)):
-                        # We did not promote, change our turn back
-                        # Undo the previous move
+                        # We did not promote, undo our move
+                        self.undo()
                         print("UNDO")
                     else:
                         chosen_piece = self.promote_pawn(y, promote_piece)
@@ -488,10 +494,20 @@ class Game():
                         else:
                             self.black.remove_piece(promote_piece)
                             self.black.add_piece(chosen_piece)
+                        print(chosen_piece)
                     self.promoting = not self.promoting 
-                    print(chosen_piece)
+                    break
                 # Check if the user is attempting to drag and drop a piece
-                if (event.type == pygame.MOUSEBUTTONDOWN) and (event.button == 1):
+                if (not self.promoting) and (event.type == pygame.MOUSEBUTTONDOWN) and (event.button == 1):
+                    # Remember the current board state
+                    print("We have change Prev | self.promoting: ", self.promoting)
+                    self.prev = [self.black, self.white]
+                    if index == 1:
+                        new = self.black
+                        index += 1
+                    else:
+                        print(new.get_pieces())
+                        print(self.black.get_pieces())
                     x, y = event.pos
                     # CHECK BLACK PIECES
                     if (not self.get_turn()):
@@ -550,8 +566,13 @@ class Game():
                 # Check if the user has quit
                 if event.type == pygame.QUIT:
                     self.set_run(False)
-
             pygame.display.update()
+
+    def undo(self) -> None:
+        # Undo moves
+        print(self.prev[0])
+        self.black = self.prev[0]
+        self.white = self.prev[1]
 
     def setup(self) -> List[Player]:
         # Set up Black Pieces
