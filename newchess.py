@@ -324,10 +324,8 @@ class Chess():
         self.turn = WHITE
 
     def play(self):
-        print(self.move_history)
         print(self.pieces)
-        self.make_move(self.pieces[8], self.pieces[0].get_position(), (0, 1))
-        print(self.pieces)
+        print(self.castle(self.pieces[0], (0, 0)))
         return
     
     """
@@ -343,7 +341,7 @@ class Chess():
                 Bishop(BLACK, (5, 0)),
                 Knight(BLACK, (6, 0)),
                 Rook(BLACK, (7, 0))
-                ] + [Pawn(BLACK, (i, 0)) for i in range(8)] + \
+                ] + [Pawn(BLACK, (i, 1)) for i in range(8)] + \
                 [# WHITE PIECES
                 Rook(WHITE, (0, 7)),
                 Knight(WHITE, (1, 7)),
@@ -353,7 +351,7 @@ class Chess():
                 Bishop(WHITE, (5, 7)),
                 Knight(WHITE, (6, 7)),
                 Rook(WHITE, (7, 7))
-                ] + [Pawn(WHITE, (i, 7)) for i in range(8)]
+                ] + [Pawn(WHITE, (i, 6)) for i in range(8)]
     
     def make_move(self, piece: Piece, start: tuple[int, int], end: tuple[int, int], captured=None, special=None):
         # Normal Movement and Takes
@@ -381,8 +379,14 @@ class Chess():
         if last_move.get_captured():
             self.place_piece(last_move.get_captured())
 
-    def castle(self):
-        pass
+    def castle(self, piece: Piece, end: tuple[int, int]):
+        # Get enemy moves
+        enemy_pieces = [enemy for enemy in self.pieces if enemy.get_colour() != self.turn]
+        enemy_pos = [enemy.get_position() for enemy in enemy_pieces]
+        ally_pieces = [ally for ally in self.pieces if ally.get_colour() == self.turn]
+        ally_pos = [ally.get_position() for ally in ally_pieces]
+        bad_square = enemy_pieces[0].valid_move(enemy_pieces[0].get_position(), ally_pos, enemy_pos)
+        print(bad_square)
 
     def enpassant(self):
         pass
