@@ -78,6 +78,10 @@ class Piece():
         self.piece = piece
         self.position = position
         self.colour = colour
+        self.rule = None
+
+    def valid_move(self):
+        return None
 
     def get_piece(self):
         return self.piece
@@ -87,6 +91,9 @@ class Piece():
     
     def get_colour(self) -> int:
         return self.colour
+    
+    def get_rule(self):
+        return self.rule
     
     def print_colour(self) -> str:
         if self.colour:
@@ -308,9 +315,6 @@ class Move():
     
     def get_special(self):
         return self.special
-    
-    def change_piece_position(self, new_position: tuple[int, int]):
-        self.piece.change_position(new_position)
 
 # The controller that controls Move and GUI
 class Chess():
@@ -322,7 +326,7 @@ class Chess():
     def play(self):
         print(self.move_history)
         print(self.pieces)
-        self.make_move(self.pieces[0], self.pieces[0].get_position(), (5, 5))
+        self.make_move(self.pieces[8], self.pieces[0].get_position(), (0, 1))
         print(self.pieces)
         return
     
@@ -352,10 +356,18 @@ class Chess():
                 ] + [Pawn(WHITE, (i, 7)) for i in range(8)]
     
     def make_move(self, piece: Piece, start: tuple[int, int], end: tuple[int, int], captured=None, special=None):
-        move = Move(piece, start, end, captured, special)
-        self.move_history.append(move)
+        # Normal Movement and Takes
+        if end in piece.valid_move(piece.get_position(), [pieces for pieces in self.pieces if pieces.get_colour() != self.turn], [pieces for pieces in self.pieces if pieces.get_colour() == self.turn and pieces.get_position() != start]):
+            # Get the history of the move
+            move = Move(piece, start, end, captured, special)
+            self.move_history.append(move)
 
-        piece.change_position(end)
+            # Change the Piece's position since we moved it
+            piece.change_position(end)
+        
+        # Castle
+
+        # En Passant
 
     def undo_move(self):
         if self.move_history:
@@ -368,6 +380,12 @@ class Chess():
         # Restore any captured piece
         if last_move.get_captured():
             self.place_piece(last_move.get_captured())
+
+    def castle(self):
+        pass
+
+    def enpassant(self):
+        pass
 
     def place_piece(self, captured: Piece):
         self.pieces.append(captured)
