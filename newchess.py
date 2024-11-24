@@ -126,7 +126,7 @@ class King(Piece):
             return WHITE_KING
         return BLACK_KING
     
-    def valid_move(self, old_position: tuple[int, int], _, __) -> List[tuple[int, int]]:
+    def valid_move(self, old_position: tuple[int, int], _, ally: tuple[int, int]) -> List[tuple[int, int]]:
         valid_pos = []
         king_x, king_y = old_position
 
@@ -134,6 +134,8 @@ class King(Piece):
             if (move_x + king_x < 0 or move_x + king_x > 7):
                 continue
             if (move_y + king_y < 0 or move_y + king_y > 7):
+                continue
+            if (move_x + king_x, move_y + king_y) in ally:
                 continue
             valid_pos.append((king_x + move_x, king_y + move_y))
         return valid_pos
@@ -210,7 +212,7 @@ class Knight(Piece):
     new_list = [(move_x + knight_x, move_y + knight_y) for move_x, move_y in KNIGHT_MOVES \
             if (0 <= move_x + knight_x <= 7) and (0 <= move_y + knight_y <= 7)]
     """
-    def valid_move(self, old_position: tuple[int, int], _, __) -> List[tuple[int, int]]:
+    def valid_move(self, old_position: tuple[int, int], _, ally: tuple[int, int]) -> List[tuple[int, int]]:
         valid_pos = []
         knight_x, knight_y = old_position
 
@@ -218,6 +220,8 @@ class Knight(Piece):
             if (move_x + knight_x < 0 or move_x + knight_x > 7):
                 continue
             if (move_y + knight_y < 0 or move_y + knight_y > 7):
+                continue
+            if (move_x + knight_x, move_y + knight_y) in ally:
                 continue
             valid_pos.append((move_x + knight_x, move_y + knight_y))
         return valid_pos
@@ -315,6 +319,15 @@ class Move():
     
     def get_special(self):
         return self.special
+    
+class Player():
+    def __init__(self, colour: int, pieces: tuple[Piece]):
+        self.colour = colour
+        self.pieces = pieces
+        self.attack_map = []
+
+    def update_map(self, piece: tuple[Piece], old_position: tuple[int, int], enemy_pos: tuple[int, int]):
+        pass
 
 # The controller that controls Move and GUI
 class Chess():
@@ -381,11 +394,7 @@ class Chess():
 
     def castle(self, piece: Piece, end: tuple[int, int]):
         # Get enemy moves
-        enemy_pieces = [enemy for enemy in self.pieces if enemy.get_colour() != self.turn]
-        enemy_pos = [enemy.get_position() for enemy in enemy_pieces]
-        ally_pieces = [ally for ally in self.pieces if ally.get_colour() == self.turn]
-        ally_pos = [ally.get_position() for ally in ally_pieces]
-        bad_square = enemy_pieces[0].valid_move(enemy_pieces[0].get_position(), ally_pos, enemy_pos)
+        bad_square = self.get_all_moves()[WHITE]
         print(bad_square)
 
     def enpassant(self):
@@ -393,6 +402,29 @@ class Chess():
 
     def place_piece(self, captured: Piece):
         self.pieces.append(captured)
+
+    def get_pieces(self) -> tuple[Piece]:
+        return self.pieces
+
+    def get_all_moves(self) -> tuple[int, int]:
+        # Split all pieces up separately
+        white_pieces = [wp for wp in self.get_pieces() if wp.get_colour()]
+        black_pieces = [bp for bp in self.get_pieces() if not bp.get_colour()]
+        # Get all the piece's position
+        white_pos = [wp.get_position() for wp in white_pieces]
+        black_pos = [bp.get_position() for bp in black_pieces]
+        # Get all the piece's move
+        white_move = [wm.valid_move(wm.get_position(), black_pos, white_pos) for wm in white_pieces]
+        black_move = [bm.valid_move(bm.get_position(), white_pos, black_pos) for bm in black_pieces]
+        # Flatten the list such that there is no empty list or list within a list
+        flatten_white = [fw for sub in white_move for fw in sub]
+        flatten_black = [fb for sub in black_move for fb in sub]
+        # Remove any duplicates
+        res_white = list(set(flatten_white))
+        res_black = list(set(flatten_black))
+        # Now return the list such that the 0th index is BLACK and 1st index is WHITE
+        return [res_black, res_white]
+
 
 def main():
     chess = Chess()
